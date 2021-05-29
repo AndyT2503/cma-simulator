@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -9,7 +10,9 @@ namespace CMA_Simulator.Model
 {
     public class Container
     {
+        [Key]
         public string ContainerNumber { get; set; }
+        public string LeaseType { get; set; }
         public string BuildYearAndCountry { get; set; }
         public string EquipmentSizeType { get; set; }
         public string LastEvent { get; set; }
