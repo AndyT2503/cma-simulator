@@ -1,5 +1,4 @@
-﻿using CMA_Simulator.Const;
-using CMA_Simulator.Dto;
+﻿using CMA_Simulator.Dto;
 using CMA_Simulator.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +41,23 @@ namespace CMA_Simulator.Controllers
             return Ok();
         }
 
+        [HttpGet()]
+        public async Task<IActionResult> GetAllContainer()
+        {
+            var listContainer = await _mainDbContext.Containers.Select(x => new ContainerDto
+            {
+                BuildYearAndCountry = x.BuildYearAndCountry,
+                ContainerNumber = x.ContainerNumber,
+                CreditTermsRule = x.CreditTermsRule,
+                EquipmentSizeType = x.EquipmentSizeType,
+                LasEventDateTime = x.LasEventDateTime,
+                LastEvent = x.LastEvent,
+                LeaseType = x.LeaseType
+            }).ToListAsync();
+            return Ok(listContainer);
+            
+        }
+
         [HttpGet("{containerNumber}")]
         public async Task<IActionResult> GetContainerInfor(string containerNumber)
         {
@@ -62,31 +78,26 @@ namespace CMA_Simulator.Controllers
             return Ok(result);
         }
 
-        [HttpPut("{containerNumber}/lastEvent")]
-        public async Task<IActionResult> UpdateContainerLastEvent(string containerNumber, ContainerDto containerDto)
+        [HttpPut("{containerNumber}")]
+        public async Task<IActionResult> UpdateContainerLastEvent(string containerNumber, ContainerUpdateDto input)
         {
             var container = await _mainDbContext.Containers.FirstOrDefaultAsync(x => x.ContainerNumber == containerNumber);
             if (container is null)
             {
                 throw new Exception($"Bad request parameters: The container {containerNumber} doesn't exist");
             }
-            container.LastEvent = containerDto.LastEvent;
+            if(!string.IsNullOrEmpty(input.LastEvent))
+            {
+                container.LastEvent = input.LastEvent;
+            }
+            if(input.CreditTermsRule is not null)
+            {
+                container.CreditTermsRule = input.CreditTermsRule;
+            }
             await _mainDbContext.SaveChangesAsync();
             return Ok();
         }
 
-        [HttpPut("{containerNumber}/creditTermsRules")]
-        public async Task<IActionResult> UpdateContainerCreditTermsRules(string containerNumber, ContainerDto containerDto)
-        {
-            var container = await _mainDbContext.Containers.FirstOrDefaultAsync(x => x.ContainerNumber == containerNumber);
-            if (container is null)
-            {
-                throw new Exception($"Bad request parameters: The container {containerNumber} doesn't exist");
-            }
-            container.CreditTermsRule = containerDto.CreditTermsRule;
-            await _mainDbContext.SaveChangesAsync();
-            return Ok();
-        }
 
         [HttpPost("{containerNumber}/reuse")]
         public async Task CreateReuse(string containerNumber,CreateReuseDto input)
@@ -98,17 +109,17 @@ namespace CMA_Simulator.Controllers
             }
             var bookingContainsCont = await _mainDbContext.Shipments.Include(x => x.CargoEquipments)
                             .FirstOrDefaultAsync(x => x.CargoEquipments.Any(i => i.AssignedContainerNumber == container.ContainerNumber) &&
-                                                      Constant.BookingStartChar.Contains(x.ShipmentId.Substring(0, 3)));
+                                                      x.Destination.Substring(0, 2) != "VN");
             if(bookingContainsCont is not null)
             {
                 throw new Exception("Container is assign to another booking");
             }
-            if(!Constant.BookingStartChar.Contains(input.ShipmentReference.Substring(0, 3)))
-            {
-                throw new Exception("Shipment Reference is no booking");
-            }
             var bookingAssignCont = await _mainDbContext.Shipments.FirstOrDefaultAsync(x => x.ShipmentId == input.ShipmentReference && x.Destination == input.Destination);
-            if(bookingAssignCont is null)
+            if (bookingAssignCont.Destination.Substring(0, 2) == "VN")
+            {
+                throw new Exception("Shipment Reference is not a booking");
+            }
+            if (bookingAssignCont is null)
             {
                 throw new Exception("Booking doesn't exist");
             }

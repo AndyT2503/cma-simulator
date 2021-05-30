@@ -79,5 +79,37 @@ namespace CMA_Simulator.Controllers
             };
             return Ok(result);
         }
+
+        [HttpPost("{shipmentId}/billing")]
+        public async Task<IActionResult> UpdateContainerToBilling(string shipmentId, string[] containerNumbers)
+        {
+            var billing = await _mainDbContext.Shipments.FirstOrDefaultAsync(x => x.ShipmentId == shipmentId);
+            if(billing is null)
+            {
+                throw new Exception("B/l doesn't exist");
+            }
+            if(billing.Destination.Substring(0,2) != "VN")
+            {
+                throw new Exception("Shipment is not a B/L");
+            }
+            var cargoEquipments = await _mainDbContext.CargoEquipments.Where(x => x.ShipmentId == shipmentId).ToListAsync();
+            foreach (var containerNo in containerNumbers)
+            {
+                var container = await _mainDbContext.Containers.FirstOrDefaultAsync(x => x.ContainerNumber == containerNo);
+                if(container is null)
+                {
+                    throw new Exception($"Container {containerNo} doesn't exist");
+                }
+                var cargoEquipmentAssignCont = cargoEquipments.FirstOrDefault(x => String.IsNullOrEmpty(x.AssignedContainerNumber) 
+                                                                            && x.EquipmentSizeType == container.EquipmentSizeType);
+                if(cargoEquipmentAssignCont is null)
+                {
+                    throw new Exception($"Container {containerNo} can not assign no this B/L");
+                }
+                cargoEquipmentAssignCont.AssignedContainerNumber = containerNo;
+            }
+            await _mainDbContext.SaveChangesAsync();
+            return Ok();
+        }
     }
 }
