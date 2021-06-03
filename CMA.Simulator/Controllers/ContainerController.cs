@@ -114,7 +114,7 @@ namespace CMA_Simulator.Controllers
             {
                 throw new Exception("Container is assign to another booking");
             }
-            var bookingAssignCont = await _mainDbContext.Shipments.FirstOrDefaultAsync(x => x.ShipmentId == input.ShipmentReference && x.Destination == input.Destination);
+            var bookingAssignCont = await _mainDbContext.Shipments.FirstOrDefaultAsync(x => x.ShipmentId == input.ShipmentReference);
             if (bookingAssignCont.Destination.Substring(0, 2) == "VN")
             {
                 throw new Exception("Shipment Reference is not a booking");
